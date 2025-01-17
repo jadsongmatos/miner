@@ -1,8 +1,11 @@
 # Dockerfile for Bitcoin mining with cpuminer
-# Usage: docker run --rm minerd --url <stratum_url> --user <username> --pass <password>
-# Example: docker run -d minerd --url stratum+tcp://btc.pool.com:3333 --user user.worker --pass password
+# Usage: docker run --rm --network host minerd --url <stratum_url> --user <username> --pass <password>
+# Example: docker run -d --network host minerd --url stratum+tcp://btc.pool.com:3333 --user user.worker --pass password
 
 FROM alpine:latest
+
+# Set a default value for CFLAGS, which can be overridden during build
+ARG CFLAGS="-O3"
 
 # Install necessary dependencies
 RUN apk add --no-cache \
@@ -24,7 +27,7 @@ RUN git clone --depth=1 https://github.com/pooler/cpuminer.git /cpuminer
 # Build cpuminer
 WORKDIR /cpuminer
 RUN ./autogen.sh && \
-    ./configure CFLAGS="-O3" && \
+    ./configure CFLAGS="$CFLAGS" && \
     make && \
     make install
 
@@ -35,5 +38,8 @@ RUN apk del git autoconf libtool && \
 # Set working directory
 WORKDIR /cpuminer
 
-# Entry point for mining
-ENTRYPOINT ["./minerd"]
+# Set user to root to allow process priority adjustment
+USER root
+
+# Default command for the container
+ENTRYPOINT ["nice", "-n", "-20", "./minerd"]
