@@ -1,11 +1,21 @@
-# Dockerfile for Bitcoin mining with cpuminer
-# Usage: docker run --rm --network host minerd --url <stratum_url> --user <username> --pass <password>
-# Example: docker run -d --network host minerd --url stratum+tcp://btc.pool.com:3333 --user user.worker --pass password
+# Dockerfile para mineração Bitcoin com cpuminer, com melhorias de I/O e desabilitação da durabilidade
+# Uso:
+#    docker run --rm \
+#  --sysctl net.core.rmem_max=... \
+#  --sysctl net.core.wmem_max=... \
+#  --sysctl net.ipv4.tcp_rmem="..." \
+#  --sysctl net.ipv4.tcp_wmem="..." \
+#  --network host \
+#  minerd --url <stratum_url> --user <username> --pass <password>
 
-FROM alpine:latest
+FROM alpine:edge
 
 # Set a default value for CFLAGS, which can be overridden during build
 ARG CFLAGS="-O3"
+
+# Adicionar o repositório edge do Alpine
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && \
+    apk update
 
 # Install necessary dependencies
 RUN apk add --no-cache \
@@ -18,13 +28,11 @@ RUN apk add --no-cache \
     musl-dev \
     jansson \
     autoconf \
+    libeatmydata \
     libtool && \
     rm -rf /var/cache/apk/*
 
-# Clone cpuminer repository
 RUN git clone --depth=1 https://github.com/pooler/cpuminer.git /cpuminer
-
-# Build cpuminer
 WORKDIR /cpuminer
 RUN ./autogen.sh && \
     ./configure CFLAGS="$CFLAGS" && \
@@ -42,4 +50,4 @@ WORKDIR /cpuminer
 USER root
 
 # Default command for the container
-ENTRYPOINT ["nice", "-n", "-20", "./minerd"]
+ENTRYPOINT ["ionice", "-c", "2", "-n", "0", "nice", "-n", "-20","eatmydata","./minerd"]
