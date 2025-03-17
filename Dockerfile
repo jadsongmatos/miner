@@ -11,7 +11,7 @@
 FROM alpine:edge
 
 # Set a default value for CFLAGS, which can be overridden during build
-ARG CFLAGS="-O3"
+ARG CFLAGS="-O3 -march=native -mtune=native"
 
 # Adicionar o repositório edge do Alpine
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && \
@@ -50,4 +50,5 @@ WORKDIR /cpuminer
 USER root
 
 # Default command for the container
-ENTRYPOINT ["ionice", "-c", "2", "-n", "0", "nice", "-n", "-20","eatmydata","./minerd"]
+ENTRYPOINT ["ionice", "-c", "2", "-n", "0", "nice", "-n", "-20","chrt", "-f", "99","eatmydata","./minerd"]
+#ENTRYPOINT ["ionice", "-3", "nice", "-n", "19","chrt", "-i", "0","eatmydata","./minerd"]
